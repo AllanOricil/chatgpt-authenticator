@@ -4,6 +4,11 @@
   "description": "OpenAI Authentication Library for ChatGPT",
   "author": "Allan Oricil <allan@oricil.com>",
   "license": "MIT",
+  "homepage": "https://github.com/AllanOricil/chat-gpt-authenticator#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AllanOricil/chat-gpt-authenticator"
+  },
   "main": "./dist/index.min.cjs",
   "module": "./dist/index.min.mjs",
   "source": "./src/index.js",
