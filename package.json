@@ -1,6 +1,6 @@
 {
   "name": "chat-gpt-authenticator",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "OpenAI Authentication Library for ChatGPT",
   "author": "Allan Oricil <allan@oricil.com>",
   "license": "MIT",
