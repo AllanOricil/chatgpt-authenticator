@@ -1,32 +1,35 @@
-const terser = require("@rollup/plugin-terser");
-const commonjs = require("@rollup/plugin-commonjs");
+import terser from "@rollup/plugin-terser";
+import commonjs from "@rollup/plugin-commonjs";
+import nodeResolve from "@rollup/plugin-node-resolve";
+import babel from "@rollup/plugin-babel";
 
-const pkg = require("./package.json");
+import clean from "rollup-plugin-delete";
+import cleanup from "rollup-plugin-cleanup";
 
-const minifiedOutputs = [
-  {
-    file: pkg.exports["."].import,
-    format: "esm",
-    exports: "named",
-    plugins: [terser()],
-  },
-  {
-    file: pkg.exports["."].require,
-    format: "cjs",
-    exports: "named",
-    plugins: [terser()],
-  },
-];
+import packageJson from "./package.json";
 
-const unminifiedOutputs = minifiedOutputs.map(({ file, plugins, ...rest }) => ({
-  ...rest,
-  file: file.replace(".min.", "."),
-}));
-
-module.exports = [
-  {
-    input: "./src/index.js",
-    output: [...unminifiedOutputs, ...minifiedOutputs],
-    plugins: [commonjs()],
-  },
-];
+export default {
+  input: "./src/index.js",
+  output: [
+    {
+      file: packageJson.exports["."].import,
+      format: "esm",
+      exports: "named",
+      sourcemap: true,
+    },
+    {
+      file: packageJson.exports["."].require,
+      format: "cjs",
+      exports: "named",
+      sourcemap: true,
+    },
+  ],
+  plugins: [
+    clean({ targets: "dist/*" }),
+    cleanup(),
+    nodeResolve(),
+    babel({ exclude: /node_modules/ }),
+    commonjs({ exclude: /node_modules/ }),
+  ],
+  external: ["fetch-cookie", "node-fetch", "set-cookie-parser"],
+};
