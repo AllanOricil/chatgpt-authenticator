@@ -62,7 +62,7 @@ jobs:
 
       - name: Update Package Version
         run: |
-          npm version ${{ steps.get_next_version.outputs.next_version }}
+          npm version ${{ steps.get_next_version.outputs.next_version }} --no-git-tag-version
           cat package.json
 
       - name: Publish package on NPM 📦
