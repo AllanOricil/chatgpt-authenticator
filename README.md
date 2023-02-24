@@ -6,23 +6,52 @@ This node library is based on this python [implementation](https://github.com/ac
 
 ## How to use
 
-````js
-const { ChatGPTAuthenticator } = require('chat-gpt-authenticator');
+Create an Open AI account in this [link](https://platform.openai.com/login/).
 
-const chatGPTAuthenticator = new ChatGPTAuthenticator(
-  'email',
-  'passowrd'
+### Methods
+
+```js
+//requests a new token or return a token that has already been fetched
+chatGPTAuthTokenService.getToken() : <Promise>
+
+//requests a new token
+chatGPTAuthTokenService.refreshToken() : <Promise>
+```
+
+### ES Modules
+
+```js
+import { ChatGPTAuthTokenService } from "chat-gpt-authenticator";
+
+const chatGPTAuthenticator = new ChatGPTAuthTokenService(
+  "OPEN_AI_EMAIL",
+  "OPEN_AI_PASSWORD"
 );
 
-//then
-chatGPTAuthenticator.auth()
-.then((token) => {
-  console.log(token);
-});
-
-//async/await
 (async () => {
-  const token = await chatGPTAuthenticator.auth();
+  const token = await chatGPTAuthenticator.getToken();
+  console.log(token);
+
+  token = await chatGPTAuthTokenService.refreshToken();
   console.log(token);
 })();
-````
+```
+
+### Common JS
+
+```js
+const { ChatGPTAuthTokenService } = require("chat-gpt-authenticator");
+
+const chatGPTAuthTokenService = new ChatGPTAuthTokenService(
+  "OPEN_AI_EMAIL",
+  "OPEN_AI_PASSWORD"
+);
+
+(async () => {
+  let token = await chatGPTAuthTokenService.getToken();
+  console.log(token);
+
+  token = await chatGPTAuthTokenService.refreshToken();
+  console.log(token);
+})();
+```
