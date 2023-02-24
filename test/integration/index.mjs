@@ -1,4 +1,4 @@
-import { ChatGPTAuthTokenService } from "../../dist/index.min.mjs";
+import { ChatGPTAuthTokenService } from "../../dist/index.mjs";
 
 const chatGPTAuthTokenService = new ChatGPTAuthTokenService(
   process.env.OPEN_AI_EMAIL,
