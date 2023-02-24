@@ -62,7 +62,7 @@ jobs:
 
       - name: Update Package Version
         run: |
-          npm version ${{ steps.get_next_version.outputs.next_version }} --no-git-tag-version
+          npm version ${{ steps.get_next_version.outputs.next_version }}
           cat package.json
 
       - name: Publish package on NPM 📦
@@ -76,4 +76,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          release_id: ${{ needs.release_drafter.outputs.id }}
+          release_id: ${{ steps.release_drafter.outputs.id }}
