@@ -1,10 +1,9 @@
 {
   "extends": ["airbnb", "plugin:prettier/recommended"],
+  "parser": "@babel/eslint-parser",
   "env": {
-    "browser": true,
     "commonjs": true,
     "es6": true,
-    "jest": true,
     "node": true
   },
   "rules": {

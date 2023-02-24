@@ -11,3 +11,4 @@ test
 .eslintrc.json
 .gitignore
 .prettierrc.json
+rollup.config.js
