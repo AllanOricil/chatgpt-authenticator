@@ -1,4 +1,4 @@
-const { ChatGPTAuthTokenService } = require("../../dist/index.min.cjs");
+const { ChatGPTAuthTokenService } = require("../../dist/index.cjs");
 
 const chatGPTAuthTokenService = new ChatGPTAuthTokenService(
   process.env.OPEN_AI_EMAIL,
