@@ -104,7 +104,7 @@ export default class ChatGPTAuthenticator {
 
     if (response.status === 302 || response.status === 200) {
       const page = await response.text();
-      const state = this.getState(page);
+      const state = ChatGPTAuthenticator.getState(page);
       return this.stepThree(state);
     }
     throw new Error("status != 302 or 200");
@@ -186,7 +186,7 @@ export default class ChatGPTAuthenticator {
     });
     if (response.status === 302 || response.status === 200) {
       const page = await response.text();
-      const newState = this.getState(page);
+      const newState = ChatGPTAuthenticator.getState(page);
       return this.stepSix(state, newState);
     }
     throw new Error("status != 302 and 200");
@@ -236,7 +236,7 @@ export default class ChatGPTAuthenticator {
     });
 
     if (response.status === 302) {
-      const accessToken = this.getCookie(
+      const accessToken = ChatGPTAuthenticator.getCookie(
         response,
         "__Secure-next-auth.session-token"
       );
