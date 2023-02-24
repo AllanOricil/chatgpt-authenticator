@@ -1,0 +1,48 @@
+name: CI Workflow
+
+on:
+  push:
+    branches:
+      - '**'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  OPEN_AI_EMAIL: ${{ secrets.OPEN_AI_EMAIL }}
+  OPEN_AI_PASSWORD: ${{ secrets.OPEN_AI_PASSWORD }}
+
+jobs:
+  ci:
+    name: 'Node ${{ matrix.NODE_VERSION }}'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        NODE_VERSION: [14, 16, 18]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: |
+          npm ci
+
+      # TODO: add tests
+      #- name: Run Unit Test
+      #  run: npm run test:unit
+
+      - name: Build Code
+        run: |
+          npm run build
+
+      - name: Run Integration Test
+        run: |
+          npm run test:integration

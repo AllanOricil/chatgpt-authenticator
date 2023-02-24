@@ -1,0 +1,13 @@
+.DS_Store
+src
+.babelrc
+.vscode
+node_modules
+test
+.github
+.husky
+.eslintignore
+.babelrc
+.eslintrc.json
+.gitignore
+.prettierrc.json

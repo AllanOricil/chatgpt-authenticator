@@ -1,0 +1,7 @@
+dist
+husky
+node_modules
+.npmignore
+package-lock.json
+package.json
+index.js

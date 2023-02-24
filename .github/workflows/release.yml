@@ -1,0 +1,79 @@
+name: Release Workflow
+
+on:
+  push:
+    tags:
+      - 'v**'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  OPEN_AI_EMAIL: ${{ secrets.OPEN_AI_EMAIL }}
+  OPEN_AI_PASSWORD: ${{ secrets.OPEN_AI_PASSWORD }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get Next Version
+        id: get_next_version
+        run: |
+          next_version=$(echo "$GITHUB_REF" | sed 's~refs/tags/v\(\d*.\d*.\d*\)~\1~')
+          echo "NEXT VERSION: $next_version"
+
+          echo "next_version=$next_version" >> $GITHUB_OUTPUT
+
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 14
+          cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install Dependencies
+        run: |
+          npm ci
+
+      # TODO: add tests
+      #- name: Run Unit Test
+      #  run: npm run test:unit
+
+      - name: Build Code
+        run: |
+          npm run build
+
+      - name: Run Integration Test
+        run: |
+          npm run test:integration
+
+      - uses: release-drafter/release-drafter@v5
+        id: release_drafter
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          commitish: main
+
+      - name: Update Package Version
+        run: |
+          npm version ${{ steps.get_next_version.outputs.next_version }} --no-git-tag-version
+          cat package.json
+
+      - name: Publish package on NPM 📦
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish Release Draft
+        uses: eregon/publish-release@v1
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          release_id: ${{ needs.release_drafter.outputs.id }}
