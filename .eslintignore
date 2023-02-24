@@ -6,3 +6,4 @@ package-lock.json
 package.json
 index.js
 rollup.config.js
+test
