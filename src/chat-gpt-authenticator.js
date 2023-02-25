@@ -5,9 +5,21 @@ import setCookie from "set-cookie-parser";
 export default class ChatGPTAuthenticator {
   constructor() {
     this.fetch = fetchCookie(nodeFetch);
+    this.sessionToken = undefined;
   }
 
-  async requestToken(email, password) {
+  async getAccessToken(email, password) {
+    if (!this.sessionToken) return this.stepZero(email, password);
+
+    try {
+      const accessToken = await this.stepEight();
+      return accessToken;
+    } catch (e) {
+      return this.stepZero(email, password);
+    }
+  }
+
+  async stepZero(email, password) {
     const response = await this.fetch(
       "https://explorer.api.openai.com/api/auth/csrf",
       {
@@ -31,7 +43,10 @@ export default class ChatGPTAuthenticator {
       if (response.status === 200) {
         const data = await response.json();
         return this.stepOne(
-          { email: encodeURIComponent(email), password: encodeURI(password) },
+          {
+            email: encodeURI(email),
+            password: encodeURI(password),
+          },
           data.csrfToken
         );
       }
@@ -236,16 +251,46 @@ export default class ChatGPTAuthenticator {
     });
 
     if (response.status === 302) {
-      const accessToken = ChatGPTAuthenticator.getCookie(
+      this.sessionToken = ChatGPTAuthenticator.getCookie(
         response,
         "__Secure-next-auth.session-token"
       );
-      if (typeof accessToken === "undefined" || accessToken === null) {
-        throw new Error("could not get an accessToken");
+      if (
+        typeof this.sessionToken === "undefined" ||
+        this.sessionToken === null
+      ) {
+        throw new Error("could not get an session token");
       }
-      return accessToken;
+      return this.stepEight();
     }
     throw new Error("status != 302");
+  }
+
+  async stepEight() {
+    const response = await this.fetch(
+      "https://explorer.api.openai.com/api/auth/session",
+      {
+        method: "GET",
+        credentials: "include",
+        redirect: "manual",
+        keepAlive: true,
+        headers: {
+          Host: "explorer.api.openai.com",
+          Accept: "application/json",
+          Connection: "keep-alive",
+          "User-Agent":
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
+          "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
+          cookie: `__Secure-next-auth.session-token=${this.sessionToken}`,
+        },
+      }
+    );
+
+    if (response.status === 200) {
+      const data = await response.json();
+      return data?.accessToken;
+    }
+    throw new Error("status != 200");
   }
 
   static getState(html) {
