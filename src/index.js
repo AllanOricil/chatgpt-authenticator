@@ -26,7 +26,7 @@ export class ChatGPTAuthTokenService {
 
   async refreshToken() {
     try {
-      this._accessToken = await chatGPTAuthenticator.requestToken(
+      this._accessToken = await chatGPTAuthenticator.getAccessToken(
         this.email,
         this.password
       );

@@ -19,6 +19,9 @@ function test(token) {
     token = await chatGPTAuthTokenService.refreshToken();
     test(token);
 
+    token = await chatGPTAuthTokenService.getToken();
+    test(token);
+
     console.log("success");
     process.exit(0);
   } catch (e) {
