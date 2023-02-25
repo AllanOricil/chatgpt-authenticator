@@ -3,6 +3,7 @@ import commonjs from "@rollup/plugin-commonjs";
 import nodeResolve from "@rollup/plugin-node-resolve";
 import babel from "@rollup/plugin-babel";
 
+import copy from "rollup-plugin-copy";
 import clean from "rollup-plugin-delete";
 import cleanup from "rollup-plugin-cleanup";
 
@@ -28,6 +29,9 @@ export default {
     clean({ targets: "dist/*" }),
     cleanup(),
     nodeResolve(),
+    copy({
+      targets: [{ src: "src/index.d.ts", dest: "dist" }],
+    }),
     babel({ exclude: /node_modules/ }),
     commonjs({ exclude: /node_modules/ }),
   ],
