@@ -3,13 +3,11 @@ import fetchCookie from "fetch-cookie";
 import setCookie from "set-cookie-parser";
 
 export default class ChatGPTAuthenticator {
-  constructor(email, password) {
-    this.email = email;
-    this.password = password;
+  constructor() {
     this.fetch = fetchCookie(nodeFetch);
   }
 
-  async requestToken() {
+  async requestToken(email, password) {
     const response = await this.fetch(
       "https://explorer.api.openai.com/api/auth/csrf",
       {
@@ -32,7 +30,10 @@ export default class ChatGPTAuthenticator {
     ) {
       if (response.status === 200) {
         const data = await response.json();
-        return this.stepOne(data.csrfToken);
+        return this.stepOne(
+          { email: encodeURIComponent(email), password: encodeURI(password) },
+          data.csrfToken
+        );
       }
       throw new Error("status != 200");
     } else {
@@ -40,7 +41,7 @@ export default class ChatGPTAuthenticator {
     }
   }
 
-  async stepOne(csrfToken) {
+  async stepOne(credentials, csrfToken) {
     const response = await this.fetch(
       "https://explorer.api.openai.com/api/auth/signin/auth0?prompt=login",
       {
@@ -77,7 +78,7 @@ export default class ChatGPTAuthenticator {
           throw new Error("You have been rate limited. Please try again.");
         }
 
-        return this.stepTwo(data.url);
+        return this.stepTwo(credentials, data.url);
       }
       throw new Error("status != 200");
     } else {
@@ -85,7 +86,7 @@ export default class ChatGPTAuthenticator {
     }
   }
 
-  async stepTwo(url) {
+  async stepTwo(credentials, url) {
     const response = await this.fetch(url, {
       method: "GET",
       credentials: "include",
@@ -105,12 +106,12 @@ export default class ChatGPTAuthenticator {
     if (response.status === 302 || response.status === 200) {
       const page = await response.text();
       const state = ChatGPTAuthenticator.getState(page);
-      return this.stepThree(state);
+      return this.stepThree(credentials, state);
     }
     throw new Error("status != 302 or 200");
   }
 
-  async stepThree(state) {
+  async stepThree(credentials, state) {
     const response = await this.fetch(
       `https://auth0.openai.com/u/login/identifier?state=${state}`,
       {
@@ -129,18 +130,17 @@ export default class ChatGPTAuthenticator {
     );
 
     if (response.status === 200) {
-      return this.stepFour(state);
+      return this.stepFour(credentials, state);
     }
     throw new Error("status != 200");
   }
 
-  async stepFour(state) {
-    const encodedEmail = encodeURIComponent(this.email);
+  async stepFour(credentials, state) {
     const response = await this.fetch(
       `https://auth0.openai.com/u/login/identifier?state=${state}`,
       {
         method: "POST",
-        body: `state=${state}&username=${encodedEmail}&js-available=false&webauthn-available=true&is-brave=false&webauthn-platform-available=true&action=default`,
+        body: `state=${state}&username=${credentials.email}&js-available=false&webauthn-available=true&is-brave=false&webauthn-platform-available=true&action=default`,
         headers: {
           Host: "auth0.openai.com",
           Origin: "https://auth0.openai.com",
@@ -157,33 +157,33 @@ export default class ChatGPTAuthenticator {
     );
 
     if (response.status === 302 || response.status === 200) {
-      return this.stepFive(state);
+      return this.stepFive(credentials, state);
     }
     throw new Error("status != 302 and 200");
   }
 
-  async stepFive(state) {
-    const url = `https://auth0.openai.com/u/login/password?state=${state}`;
-    const encodedEmail = encodeURIComponent(this.email);
-    const encodedPassword = encodeURI(this.password);
-    const response = await this.fetch(url, {
-      method: "POST",
-      credentials: "include",
-      redirect: "manual",
-      body: `state=${state}&username=${encodedEmail}&password=${encodedPassword}&action=default`,
-      headers: {
-        Host: "auth0.openai.com",
-        Origin: "https://auth0.openai.com",
-        Connection: "keep-alive",
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "User-Agent":
-          "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
-        Referer: `https://auth0.openai.com/u/login/password?state=${state}`,
-        "Accept-Language": "en-US,en;q=0.9",
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-    });
+  async stepFive({ email, password }, state) {
+    const response = await this.fetch(
+      `https://auth0.openai.com/u/login/password?state=${state}`,
+      {
+        method: "POST",
+        credentials: "include",
+        redirect: "manual",
+        body: `state=${state}&username=${email}&password=${password}&action=default`,
+        headers: {
+          Host: "auth0.openai.com",
+          Origin: "https://auth0.openai.com",
+          Connection: "keep-alive",
+          Accept:
+            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "User-Agent":
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
+          Referer: `https://auth0.openai.com/u/login/password?state=${state}`,
+          "Accept-Language": "en-US,en;q=0.9",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    );
     if (response.status === 302 || response.status === 200) {
       const page = await response.text();
       const newState = ChatGPTAuthenticator.getState(page);
