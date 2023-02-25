@@ -23,13 +23,13 @@ chatGPTAuthTokenService.refreshToken() : <Promise>
 ```js
 import { ChatGPTAuthTokenService } from "chat-gpt-authenticator";
 
-const chatGPTAuthenticator = new ChatGPTAuthTokenService(
+const chatGptAuthTokenService = new ChatGPTAuthTokenService(
   "OPEN_AI_EMAIL",
   "OPEN_AI_PASSWORD"
 );
 
 (async () => {
-  const token = await chatGPTAuthenticator.getToken();
+  const token = await chatGptAuthTokenService.getToken();
   console.log(token);
 
   token = await chatGPTAuthTokenService.refreshToken();
