@@ -1,10 +1,12 @@
 import ChatGPTAuthenticator from "./chat-gpt-authenticator";
 
+const chatGPTAuthenticator = new ChatGPTAuthenticator();
+
 export class ChatGPTAuthTokenService {
   constructor(email, password) {
-    this._email = email;
-    this._password = password;
     this._accessToken = undefined;
+    this.email = email;
+    this.password = password;
   }
 
   async getToken() {
@@ -24,11 +26,10 @@ export class ChatGPTAuthTokenService {
 
   async refreshToken() {
     try {
-      const chatGPTAuthenticator = new ChatGPTAuthenticator(
-        this._email,
-        this._password
+      this._accessToken = await chatGPTAuthenticator.requestToken(
+        this.email,
+        this.password
       );
-      this._accessToken = await chatGPTAuthenticator.requestToken();
       return this._accessToken;
     } catch (e) {
       throw new Error("could not refresh token");
