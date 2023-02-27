@@ -2,10 +2,38 @@ import nodeFetch from "node-fetch";
 import fetchCookie from "fetch-cookie";
 import setCookie from "set-cookie-parser";
 
+function getState(html) {
+  const state = html.match(/state=(.*)/g)[0];
+  return state.split('"')[0].split("=")[1];
+}
+
+function getCookie(response, name) {
+  const readerCookies = setCookie.splitCookiesString(
+    response.headers.get("set-cookie")
+  );
+  const parseCookies = setCookie.parse(readerCookies);
+
+  const cookie = parseCookies.find((c) => c.name === name);
+  if (!cookie || !cookie?.value)
+    throw new Error(`could not find cookie: expected ${name}`);
+
+  return cookie.value;
+}
+
+function validateContentType(response, contentType) {
+  if (response.headers.get("content-type")?.indexOf(contentType) === -1)
+    throw new Error(`wrong response type: expected ${contentType}`);
+}
+
+function validateStatuses(response, statuses) {
+  if (!statuses.includes(response.status))
+    throw new Error(`wrong status code: expected ${statuses}`);
+}
+
 export default class ChatGPTAuthenticator {
   constructor() {
     this.fetch = fetchCookie(nodeFetch);
-    this.sessionToken = undefined;
+    this.sessionToken = null;
   }
 
   async getAccessToken(email, password) {
@@ -37,23 +65,14 @@ export default class ChatGPTAuthenticator {
       }
     );
 
-    if (
-      response.headers.get("content-type")?.indexOf("application/json") !== -1
-    ) {
-      if (response.status === 200) {
-        const data = await response.json();
-        return this.stepOne(
-          {
-            email: encodeURI(email),
-            password: encodeURI(password),
-          },
-          data.csrfToken
-        );
-      }
-      throw new Error("status != 200");
-    } else {
-      throw new Error("response cannot be parsed");
-    }
+    validateContentType(response, "application/json");
+    validateStatuses(response, [200]);
+
+    const data = await response.json();
+    return this.stepOne(
+      { email: encodeURI(email), password: encodeURI(password) },
+      data.csrfToken
+    );
   }
 
   async stepOne(credentials, csrfToken) {
@@ -81,24 +100,18 @@ export default class ChatGPTAuthenticator {
       }
     );
 
-    if (
-      response.headers.get("content-type")?.indexOf("application/json") !== -1
-    ) {
-      if (response.status === 200) {
-        const data = await response.json();
-        if (
-          data?.url ===
-          "https://explorer.api.openai.com/api/auth/error?error=OAuthSignin"
-        ) {
-          throw new Error("You have been rate limited. Please try again.");
-        }
+    validateContentType(response, "application/json");
+    validateStatuses(response, [200]);
 
-        return this.stepTwo(credentials, data.url);
-      }
-      throw new Error("status != 200");
-    } else {
-      throw new Error("response cannot be parsed");
+    const data = await response.json();
+    if (
+      data?.url ===
+      "https://explorer.api.openai.com/api/auth/error?error=OAuthSignin"
+    ) {
+      throw new Error("You have been rate limited. Please try again.");
     }
+
+    return this.stepTwo(credentials, data.url);
   }
 
   async stepTwo(credentials, url) {
@@ -118,12 +131,11 @@ export default class ChatGPTAuthenticator {
       },
     });
 
-    if (response.status === 302 || response.status === 200) {
-      const page = await response.text();
-      const state = ChatGPTAuthenticator.getState(page);
-      return this.stepThree(credentials, state);
-    }
-    throw new Error("status != 302 or 200");
+    validateStatuses(response, [200, 302]);
+
+    const page = await response.text();
+    const state = getState(page);
+    return this.stepThree(credentials, state);
   }
 
   async stepThree(credentials, state) {
@@ -144,10 +156,9 @@ export default class ChatGPTAuthenticator {
       }
     );
 
-    if (response.status === 200) {
-      return this.stepFour(credentials, state);
-    }
-    throw new Error("status != 200");
+    validateStatuses(response, [200]);
+
+    return this.stepFour(credentials, state);
   }
 
   async stepFour(credentials, state) {
@@ -171,10 +182,9 @@ export default class ChatGPTAuthenticator {
       }
     );
 
-    if (response.status === 302 || response.status === 200) {
-      return this.stepFive(credentials, state);
-    }
-    throw new Error("status != 302 and 200");
+    validateStatuses(response, [200, 302]);
+
+    return this.stepFive(credentials, state);
   }
 
   async stepFive({ email, password }, state) {
@@ -199,12 +209,12 @@ export default class ChatGPTAuthenticator {
         },
       }
     );
-    if (response.status === 302 || response.status === 200) {
-      const page = await response.text();
-      const newState = ChatGPTAuthenticator.getState(page);
-      return this.stepSix(state, newState);
-    }
-    throw new Error("status != 302 and 200");
+
+    validateStatuses(response, [200, 302]);
+
+    const page = await response.text();
+    const newState = getState(page);
+    return this.stepSix(state, newState);
   }
 
   async stepSix(oldState, newState) {
@@ -226,11 +236,10 @@ export default class ChatGPTAuthenticator {
       },
     });
 
-    if (response.status === 302) {
-      const redirectUrl = response.headers.get("location");
-      return this.stepSeven(redirectUrl, url);
-    }
-    throw new Error("status != 302");
+    validateStatuses(response, [302]);
+
+    const redirectUrl = response.headers.get("location");
+    return this.stepSeven(redirectUrl, url);
   }
 
   async stepSeven(redirectUrl, previousUrl) {
@@ -250,20 +259,11 @@ export default class ChatGPTAuthenticator {
       },
     });
 
-    if (response.status === 302) {
-      this.sessionToken = ChatGPTAuthenticator.getCookie(
-        response,
-        "__Secure-next-auth.session-token"
-      );
-      if (
-        typeof this.sessionToken === "undefined" ||
-        this.sessionToken === null
-      ) {
-        throw new Error("could not get an session token");
-      }
-      return this.stepEight();
-    }
-    throw new Error("status != 302");
+    validateStatuses(response, [302]);
+
+    this.sessionToken = getCookie(response, "__Secure-next-auth.session-token");
+    if (!this.sessionToken) throw new Error("could not get a session token");
+    return this.stepEight();
   }
 
   async stepEight() {
@@ -286,23 +286,10 @@ export default class ChatGPTAuthenticator {
       }
     );
 
-    if (response.status === 200) {
-      const data = await response.json();
-      return data?.accessToken;
-    }
-    throw new Error("status != 200");
-  }
+    validateStatuses(response, [200]);
 
-  static getState(html) {
-    const state = html.match(/state=(.*)/g)[0];
-    return state.split('"')[0].split("=")[1];
-  }
-
-  static getCookie(response, name) {
-    const readerCookies = setCookie.splitCookiesString(
-      response.headers.get("set-cookie")
-    );
-    const parseCookies = setCookie.parse(readerCookies);
-    return parseCookies.find((cookie) => cookie.name === name)?.value;
+    const data = await response.json();
+    if (!data?.accessToken) throw new Error("could not get an access token");
+    return data.accessToken;
   }
 }
