@@ -12,11 +12,11 @@ export class ChatGPTAuthTokenService {
     try {
       if (this.accessToken) return this.accessToken;
 
-      const accessToken = await this.chatGPTAuthenticator.getAccessToken(
+      this.accessToken = await this.chatGPTAuthenticator.getAccessToken(
         this.email,
         this.password
       );
-      return accessToken;
+      return this.accessToken;
     } catch (e) {
       console.error(e);
       throw new Error("could not get token");
